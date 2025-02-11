@@ -1,0 +1,21 @@
+{
+    "appInfo" :{
+        "title" : "GemLightBox",
+        "description" : "GemLightBox Web Control Application",
+        "version" : "v0.3.1"
+    },
+
+    "ble": {
+        "deviceName": "GemLightBox",
+        "bleService":           "0000ffe0-0000-1000-8000-00805f9b34fb",
+        "bleCharacteristic":    "0000ffe1-0000-1000-8000-00805f9b34fb",
+        "__comments": [
+            "gemlightbox registered UUID",
+            "bleService : 0000ffe0-0000-1000-8000-00805f9b34fb",
+            "bleCharacteristic : 0000ffe1-0000-1000-8000-00805f9b34fb", 
+            "Testing UUID",
+            "bleService : 00008018-0000-1000-8000-00805f9b34fb",
+            "bleCharacteristic : 00008022-0000-1000-8000-00805f9b34fb"            
+          ]
+    }
+}

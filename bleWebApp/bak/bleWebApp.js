@@ -110,56 +110,72 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         console.log('Initializing Bluetooth...' + deviceName);
-        
+
         let request;
         if (deviceName === "*") {
             request = navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,  // Allows selecting any available device
-                optionalServices: [bleService] // Ensure this is a valid UUID or known service
+                acceptAllDevices: true,
+                optionalServices: [bleService] // Ensure this is a valid UUID
             });
         } else {
             request = navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: deviceName }], // Matches devices starting with 'deviceName'
+                filters: [{ namePrefix: deviceName }],
                 optionalServices: [bleService]
             });
         }
         
-
-
-        request.then(device => {
-            console.log('Device Selected:', device.name);
-            bleStateContainer.innerHTML = 'Connected to device ' + device.name;
-            bleStateContainer.style.color = "#24af37";
-            device.addEventListener('gattservicedisconnected', onDisconnected);
-            return device.gatt.connect();
-        })
-        request.then(gattServer => {
-            bleServer = gattServer;
-            console.log("Connected to GATT Server");
-            return bleServer.getPrimaryService(bleService);
-        })
-        request.then(service => {
-            bleServiceFound = service;
-            console.log("Service discovered:", service.uuid);
-            return service.getCharacteristic(bleCharacteristic);
-        })
-        request.then(characteristic => {
-            console.log("Characteristic discovered:", characteristic.uuid);
-            bleCharacteristicFound = characteristic;
-            characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicChange);
-            characteristic.startNotifications();
-            console.log("Notifications Started.");
-            return characteristic.readValue();
-        })
-        request.then(value => {
-            console.log("Read value: ", value);
-            const decodedValue = new TextDecoder().decode(value);
-            console.log("Decoded value: ", decodedValue);
-            retrievedValue.innerHTML = decodedValue;
-        })
-        request.catch(error => {
-            console.log('Error: ', error);
-        });
+        request
+            .then(device => {
+                console.log('Device Selected:', device.name);
+                bleStateContainer.innerHTML = 'Connected to device ' + device.name;
+                bleStateContainer.style.color = "#24af37";
+                device.addEventListener('gattservicedisconnected', onDisconnected);
+                return device.gatt.connect();
+            })
+            .then(gattServer => {
+                console.log("Connected to GATT Server");
+                return gattServer.getPrimaryService(bleService);
+            })
+            .then(service => {
+                console.log("Service discovered:", service.uuid);
+        
+                // Read Device Information characteristics
+                return Promise.all([
+                    service.getCharacteristic('manufacturer_name_string'),
+                    service.getCharacteristic('model_number_string'),
+                    service.getCharacteristic('serial_number_string')
+                ])
+                .then(characteristics => Promise.all(characteristics.map(c => c.readValue())))
+                .then(values => {
+                    let decoder = new TextDecoder('utf-8');
+                    console.log(`Manufacturer: ${decoder.decode(values[0])}`);
+                    console.log(`Model Number: ${decoder.decode(values[1])}`);
+                    console.log(`Serial Number: ${decoder.decode(values[2])}`);
+                })
+                .then(() => service); // Return service to continue chaining
+            })
+            .then(service => {
+                return service.getCharacteristic(bleCharacteristic);
+            })
+            .then(characteristic => {
+                console.log("Characteristic discovered:", characteristic.uuid);
+                characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicChange);
+                return characteristic.startNotifications().then(() => characteristic);
+            })
+            .then(characteristic => {
+                console.log("Notifications Started.");
+                return characteristic.readValue();
+            })
+            .then(value => {
+                console.log("Read value: ", value);
+                const decodedValue = new TextDecoder().decode(value);
+                console.log("Decoded value: ", decodedValue);
+                retrievedValue.innerHTML = decodedValue;
+            })
+            .catch(error => {
+                console.error('Error: ', error);
+            });
+        
     }
 
     function onDisconnected(event) {
@@ -223,8 +239,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 // return bleServer.disconnect();
             }
         } else {
+            bleStateContainer.innerHTML = "Device Disconnected";
+            bleStateContainer.style.color = "#d13a30";            
             console.error("Bluetooth is not connected.");
-            alert("Bluetooth is not connected.");
+            // alert("Bluetooth is not connected.");
+
         }
     }
 
